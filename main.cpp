@@ -184,9 +184,58 @@ static int checkprocess(int argc, char **argv)
 	return 0;
 }
 
+static int checkpidfile(int argc, char **argv)
+{
+	if(argc != 2)
+		return 2;
+
+	FILE *f = fopen(argv[1], "rb");
+	if(f == nullptr)
+	{
+		perror("fopen");
+		return 1;
+	}
+
+	if(chdir("/proc") < 0)
+	{
+		perror("chdir");
+		fclose(f);
+		return 1;
+	}
+
+	fputs("pid,alive\n", stdout);
+
+
+	unsigned int pid;
+	for(int n; (n = fscanf(f, "%u", &pid)) != EOF;)
+	{
+		if(n == 0)
+			break;
+
+		char pidbuf[12];
+		snprintf(pidbuf, sizeof(pidbuf), "%u", pid);
+
+		int alive = 0;
+		struct stat s{};
+		if(::stat(pidbuf, &s) >= 0 && ((s.st_mode & S_IFMT) == S_IFDIR))
+			alive = 1;
+
+		fprintf(stdout, "%u,%d\n", pid, alive);
+	}
+
+	int err = ferror(f);
+	if(err)
+		perror("fscanf");
+
+	fclose(f);
+
+	return err != 0;
+}
+
 static void print_usage(FILE *f, const char *argv0)
 {
 	fprintf(f, "Usage: %s checkprocess [pid [pid [pid...]]]\n", argv0);
+	fprintf(f, "       %s checkpidfile <pidfile>\n", argv0);
 	fprintf(f, "       %s getdirs\n", argv0);
 	fprintf(f, "       %s getacct\n", argv0);
 }
@@ -199,13 +248,20 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	int ret = 2;
+
 	std::string_view command(argv[1]);
 	if(command == "checkprocess")
-		return checkprocess(argc - 1, argv + 1);
+		ret = checkprocess(argc - 1, argv + 1);
+	else if(command == "checkpidfile")
+		ret = checkpidfile(argc - 1, argv + 1);
 	else if(command == "getdirs")
-		return getdirs(argc - 1, argv + 1);
+		ret = getdirs(argc - 1, argv + 1);
 	else if(command == "getacct")
-		return getacct(argc - 1, argv + 1);
+		ret = getacct(argc - 1, argv + 1);
+
+	if(ret != 2)
+		return ret;
 
 	print_usage(stdout, argv[0]);
 	return 2;
