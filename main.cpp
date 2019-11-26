@@ -155,7 +155,22 @@ static int getacct(int argc, char **argv)
 
 static int checkprocess(int argc, char **argv)
 {
-	for(int i = 1; i < argc; ++i)
+	if(argc <= 1)
+	{
+		fputs("pid,alive\n", stdout);
+		return 0;
+	}
+
+	bool show_header = true;
+	int pidstart = 1;
+	if(std::string_view(argv[1]) == "--no-header")
+	{
+		++pidstart;
+		show_header = false;
+	}
+
+
+	for(int i = pidstart; i < argc; ++i)
 	{
 		std::string_view arg(argv[i]);
 
@@ -170,9 +185,10 @@ static int checkprocess(int argc, char **argv)
 		return 1;
 	}
 
-	fputs("pid,alive\n", stdout);
+	if(show_header)
+		fputs("pid,alive\n", stdout);
 
-	for(int i = 1; i < argc; ++i)
+	for(int i = pidstart; i < argc; ++i)
 	{
 		int alive = 0;
 		struct stat s{};
@@ -186,10 +202,27 @@ static int checkprocess(int argc, char **argv)
 
 static int checkpidfile(int argc, char **argv)
 {
-	if(argc != 2)
-		return 2;
+	bool show_header = true;
 
-	FILE *f = fopen(argv[1], "rb");
+	const char *filename = nullptr;
+
+	if(argc == 3)
+	{
+		if(std::string_view(argv[1]) != "--no-header")
+			return 2;
+
+		show_header = false;
+		filename = argv[2];
+	}
+	else if(argc != 2)
+	{
+		return 2;
+	}
+
+	if(filename == nullptr)
+		filename = argv[1];
+
+	FILE *f = fopen(filename, "rb");
 	if(f == nullptr)
 	{
 		perror("fopen");
@@ -203,7 +236,8 @@ static int checkpidfile(int argc, char **argv)
 		return 1;
 	}
 
-	fputs("pid,alive\n", stdout);
+	if(show_header)
+		fputs("pid,alive\n", stdout);
 
 
 	unsigned int pid;
@@ -234,8 +268,8 @@ static int checkpidfile(int argc, char **argv)
 
 static void print_usage(FILE *f, const char *argv0)
 {
-	fprintf(f, "Usage: %s checkprocess [pid [pid [pid...]]]\n", argv0);
-	fprintf(f, "       %s checkpidfile <pidfile>\n", argv0);
+	fprintf(f, "Usage: %s checkprocess [--no-header] [pid [pid [pid...]]]\n", argv0);
+	fprintf(f, "       %s checkpidfile [--no-header] <pidfile>\n", argv0);
 	fprintf(f, "       %s getdirs\n", argv0);
 	fprintf(f, "       %s getacct\n", argv0);
 }

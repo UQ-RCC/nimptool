@@ -6,7 +6,7 @@ Small utility for use by the Nimrod Portal.
 
 ### checkprocess
 
-`nimptool checkprocess [pid [pid [pid...]]]`
+`nimptool checkprocess [--no-header] [pid [pid [pid...]]]`
 
 Check if a list of given PIDs are alive.
 
@@ -21,7 +21,7 @@ pid,alive
 
 ### checkpidfile
 
-`nimptool checkpidfile <pidfile>`
+`nimptool checkpidfile [--no-header] <pidfile>`
 
 Check if the PIDs referenced in `pidfile` are alive.
 ```bash
